@@ -13,19 +13,41 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* เอฟเฟกต์เรดาร์ค้นหางาน */
-        @keyframes radar { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2); opacity: 0; } }
-        .radar-ping::after {
-            content: ''; position: absolute; width: 100%; height: 100%;
-            background-color: #f59e0b; border-radius: 50%; top: 0; left: 0;
-            z-index: -1; animation: radar 2s infinite ease-out;
+        /* Radar Animation */
+        @keyframes radar {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
         }
-        /* สวิตช์เปิด-ปิดรับงาน */
+        .radar-ping::after {
+            content: '';
+            position: absolute;
+            width: 100%; height: 100%;
+            background-color: #f59e0b;
+            border-radius: 50%;
+            top: 0; left: 0;
+            z-index: -1;
+            animation: radar 2s infinite ease-out;
+        }
+
+        /* Toggle Switch */
         .toggle-checkbox:checked { right: 0; border-color: #10b981; }
         .toggle-checkbox:checked + .toggle-label { background-color: #10b981; }
     </style>
 </head>
-<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden">
+<body class="text-gray-800 antialiased h-screen flex flex-col overflow-hidden relative">
+
+    <!-- 🌟 โหมดจอดำประหยัดพลังงาน (Black Screen Saver) 🌟 -->
+    <div id="dim-screen-overlay" class="fixed inset-0 bg-black z-[9999] flex flex-col items-center justify-center text-center transition-opacity duration-500 hidden opacity-0 cursor-pointer" onclick="wakeUpScreen()">
+        <div class="w-20 h-20 border-4 border-gray-800 rounded-full flex items-center justify-center mb-6 relative">
+            <div class="absolute inset-0 border-4 border-amber-500 rounded-full animate-spin border-t-transparent"></div>
+            <i class="fas fa-motorcycle text-3xl text-gray-700 animate-pulse"></i>
+        </div>
+        <h2 class="text-gray-500 text-xl font-bold mb-2">โหมดประหยัดพลังงาน</h2>
+        <p class="text-gray-600 text-sm">ระบบกำลังสแกนหางานอยู่เบื้องหลัง...</p>
+        <div class="mt-12 bg-gray-900 px-6 py-3 rounded-full border border-gray-800 animate-bounce">
+            <p class="text-gray-400 text-xs font-bold"><i class="fas fa-hand-pointer mr-2"></i> แตะหน้าจอเพื่อสว่างขึ้น</p>
+        </div>
+    </div>
 
     <!-- หน้าจอโหลดข้อมูลเริ่มต้น -->
     <div id="liff-loading" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
@@ -33,17 +55,17 @@
         <h2 class="font-bold text-xl text-gray-800">กำลังเชื่อมต่อระบบไรเดอร์...</h2>
     </div>
 
-    <!-- หน้าจอแสดง Error (เช่น ยังไม่ได้รับการอนุมัติ) -->
+    <!-- หน้าจอแสดง Error -->
     <div id="error-state" class="hidden h-full flex flex-col items-center justify-center p-6 text-center bg-white">
         <i class="fas fa-id-card text-6xl text-red-500 mb-4"></i>
         <h2 class="font-bold text-xl text-gray-800 mb-2">บัญชียังไม่พร้อมใช้งาน</h2>
-        <p class="text-sm text-gray-500" id="error-message">กรุณาสมัครเป็นไรเดอร์ผ่านหน้าแอปลูกค้า หรือรอแอดมินอนุมัติบัญชีของคุณก่อนนะคะ</p>
+        <p class="text-sm text-gray-500" id="error-message">กรุณาสมัครเป็นไรเดอร์ หรือรอแอดมินอนุมัติบัญชีก่อนนะคะ</p>
     </div>
 
     <!-- ตัวแอปหลัก -->
     <div id="app-container" class="hidden max-w-md w-full mx-auto bg-gray-50 h-full relative flex flex-col shadow-2xl">
         
-        <!-- HEADER (จะเปลี่ยนสีตามสถานะ เปิด/ปิด รับงาน) -->
+        <!-- HEADER -->
         <header class="bg-gray-800 text-white p-4 shadow-md z-20 flex justify-between items-center shrink-0 transition-colors duration-300" id="main-header">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center overflow-hidden border-2 border-transparent p-0.5" id="profile-border">
@@ -71,24 +93,29 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-1 overflow-y-auto relative">
             
-            <!-- 🌟 หน้าจอ 1: กระดานรองาน (สแกนเรดาร์) 🌟 -->
+            <!-- VIEW 1: JOB BOARD -->
             <div id="view-job-board" class="flex flex-col h-full relative">
                 
                 <!-- ม่านบังตอนออฟไลน์ -->
                 <div id="offline-overlay" class="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center p-6 transition-all duration-300">
                     <i class="fas fa-bed text-6xl text-gray-300 mb-4"></i>
                     <h2 class="text-xl font-bold text-gray-600 mb-2">คุณกำลังออฟไลน์</h2>
-                    <p class="text-sm text-gray-500">เปิดสวิตช์มุมขวาบนเพื่อเริ่มสแกนหางาน<br>ระบบจะดึงงานที่ร้านทำเสร็จแล้วมาแสดงที่นี่ค่ะ</p>
+                    <p class="text-sm text-gray-500">เปิดสวิตช์มุมขวาบนเพื่อเริ่มสแกนหางาน<br>กรุณาเปิดหน้าจอนี้ค้างไว้ ระบบจะป้องกันจอดับอัตโนมัติ</p>
                 </div>
 
                 <!-- เรดาร์สแกนหางาน -->
-                <div class="bg-white p-4 flex flex-col items-center justify-center border-b border-gray-200 shrink-0 h-32 relative overflow-hidden">
+                <div class="bg-white p-4 flex flex-col items-center justify-center border-b border-gray-200 shrink-0 h-40 relative overflow-hidden">
                     <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#f59e0b 1px, transparent 1px); background-size: 10px 10px;"></div>
                     <div class="w-10 h-10 bg-amber-500 text-white rounded-full flex items-center justify-center text-lg mb-2 relative radar-ping shadow-lg shadow-amber-500/50">
                         <i class="fas fa-satellite-dish"></i>
                     </div>
                     <p class="text-sm font-bold text-amber-600 mb-1">กำลังค้นหางาน...</p>
-                    <p class="text-[10px] text-gray-400">ระบบอัปเดตอัตโนมัติทุกๆ 10 วินาที</p>
+                    <p class="text-[10px] text-gray-400 mb-3">ระบบอัปเดตอัตโนมัติทุกๆ 10 วินาที</p>
+                    
+                    <!-- ปุ่มทดลองจำลองงานเข้า -->
+                    <button onclick="simulateNewJob()" class="bg-gray-800 hover:bg-gray-900 text-white text-[10px] font-bold py-1.5 px-3 rounded-full shadow-sm active:scale-95 transition-transform z-20">
+                        <i class="fas fa-flask mr-1"></i> เทสต์งานเข้า (จำลอง)
+                    </button>
                 </div>
 
                 <!-- รายการงานที่เด้งเข้ามา -->
@@ -97,7 +124,7 @@
                 </div>
             </div>
 
-            <!-- 🌟 หน้าจอ 2: งานที่กำลังวิ่งอยู่ (Active Job) 🌟 -->
+            <!-- VIEW 2: ACTIVE JOB -->
             <div id="view-active-job" class="hidden flex-col h-full bg-white">
                 <div class="bg-amber-50 p-3 border-b border-amber-100 flex justify-between items-center px-4 shrink-0">
                     <span class="font-bold text-amber-700 text-sm"><i class="fas fa-motorcycle mr-1"></i> งานที่กำลังดำเนินการ</span>
@@ -127,7 +154,6 @@
                             
                             <!-- ป้ายบอกว่าต้องเก็บเงินสดไหม -->
                             <div class="bg-gray-50 border border-gray-200 rounded-xl p-3" id="payment-instruction">
-                                <!-- โค้ดจะสร้างข้อความมาใส่ตรงนี้ -->
                             </div>
                         </div>
                     </div>
@@ -144,15 +170,13 @@
         </main>
     </div>
 
-    <!-- ไฟล์เสียงเตือนเวลามีงานเข้า (ซ่อนไว้) -->
     <audio id="alarm-sound" preload="auto">
         <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
     </audio>
 
     <script>
-        // ⚠️ สำคัญมาก: เอาลิงก์ GAS (Web App URL) ของพี่ณะมาใส่ตรงนี้นะคะ!
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbwtl2UN6uKKGQuyULSWR2wlzyhyFC34jtON2c_hN6Hx1R1nnOztFBcg9TM3Ze_4T0Gz/exec"; 
-        
+        // ⚠️ ลิงก์ GAS (Web App URL) อัปเดตล่าสุด!
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwqRcQtJurJGcnV2JSE92GK3n7VfzHLhFxYj92xN9NLrh4A0Mt5OkiLn6ewn5hG7xpW/exec"; 
         const LIFF_ID = "2009194952-YLwj8qNu"; 
         
         let userProfile = null;
@@ -161,27 +185,84 @@
         let jobInterval;
         let currentJobId = null;
 
-        // เริ่มต้นการทำงานของ LIFF
+        // 🌟 ตัวแปรสำหรับระบบ จอดำ และ Wake Lock 🌟
+        let wakeLock = null;
+        let idleTimer = null;
+        const IDLE_TIMEOUT = 30000; // 30 วินาที ตัดเข้าจอดำ (ปรับเป็น 60000 คือ 1 นาทีได้)
+
         async function initializeLiff() {
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (liff.isLoggedIn()) { 
                     userProfile = await liff.getProfile(); 
                     if(userProfile.pictureUrl) document.getElementById('profile-img').src = userProfile.pictureUrl;
-                    fetchJobs(); // โหลดเช็คสถานะบัญชีครั้งแรกเลย
+                    fetchJobs(); 
                 } else { 
                     liff.login(); 
                 }
             } catch (err) { 
-                console.log("LIFF Error, Using Mock Profile");
-                userProfile = {userId: "MOCK_RIDER_UID"}; // โหมดจำลองสำหรับเทสต์บนคอม
+                userProfile = {userId: "MOCK_RIDER_UID"}; 
                 fetchJobs(); 
             }
         }
-        
         window.onload = () => { initializeLiff(); };
 
-        // ฟังก์ชันสวิตช์ เปิด/ปิด การรับงาน
+        // 🌟 1. ระบบ Wake Lock (ป้องกันหน้าจอดับ) 🌟
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('✅ Wake Lock Active: หน้าจอจะไม่ดับแล้ว!');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('❌ Wake Lock Released');
+                    });
+                }
+            } catch (err) {
+                console.log('Wake Lock Error:', err.name, err.message);
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => { wakeLock = null; });
+            }
+        }
+
+        // ขอ Wake Lock ใหม่ถ้าผู้ใช้สลับแอปกลับมา
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && isOnline) {
+                requestWakeLock();
+            }
+        });
+
+        // 🌟 2. ระบบนับเวลาถอยหลังเข้าสู่โหมด "จอดำ" 🌟
+        function resetIdleTimer() {
+            clearTimeout(idleTimer);
+            // ถ้ารับงานอยู่ (Online) และไม่ได้กำลังวิ่งงานอยู่ ให้เริ่มนับเวลาเข้าจอดำ
+            if (isOnline && !currentJobId) {
+                idleTimer = setTimeout(showDimScreen, IDLE_TIMEOUT);
+            }
+        }
+
+        function showDimScreen() {
+            const dimScreen = document.getElementById('dim-screen-overlay');
+            dimScreen.classList.remove('hidden');
+            setTimeout(() => dimScreen.classList.remove('opacity-0'), 10); // หน่วงนิดนึงให้ transition ทำงาน
+        }
+
+        function wakeUpScreen() {
+            const dimScreen = document.getElementById('dim-screen-overlay');
+            dimScreen.classList.add('opacity-0');
+            setTimeout(() => dimScreen.classList.add('hidden'), 500);
+            resetIdleTimer(); // รีเซ็ตเวลานับใหม่
+        }
+
+        // ดักจับการสัมผัสหน้าจอทุกรูปแบบ เพื่อปลุกจอและรีเซ็ตเวลา
+        document.addEventListener('touchstart', resetIdleTimer);
+        document.addEventListener('click', resetIdleTimer);
+        document.addEventListener('mousemove', resetIdleTimer);
+
+        // 🌟 เปิด/ปิด สวิตช์การทำงาน 🌟
         function toggleOnlineStatus() {
             isOnline = document.getElementById('toggle-online').checked;
             
@@ -193,37 +274,35 @@
             const profileBorder = document.getElementById('profile-border');
 
             if (isOnline) {
-                // เปลี่ยน UI เป็นโหมดพร้อมรับงาน (สีเขียว/ส้ม)
                 header.classList.replace('bg-gray-800', 'bg-amber-500'); 
                 overlay.classList.add('hidden');
-                statusDot.classList.replace('bg-gray-500', 'bg-green-300'); 
-                statusDot.classList.add('animate-pulse');
-                statusText.innerText = "พร้อมรับงาน"; 
-                statusText.classList.replace('text-gray-300', 'text-amber-100');
-                profileImg.classList.remove('grayscale'); 
-                profileBorder.classList.replace('border-transparent', 'border-amber-200');
+                statusDot.classList.replace('bg-gray-500', 'bg-green-300'); statusDot.classList.add('animate-pulse');
+                statusText.innerText = "พร้อมรับงาน"; statusText.classList.replace('text-gray-300', 'text-amber-100');
+                profileImg.classList.remove('grayscale'); profileBorder.classList.replace('border-transparent', 'border-amber-200');
                 
-                // เริ่มระบบสแกนหางาน
-                fetchJobs(); // ดึงรอบแรกทันที
-                jobInterval = setInterval(fetchJobs, 10000); // ตั้งเวลาดึงข้อมูลซ้ำทุก 10 วินาที
+                // เริ่มทำงานระบบต่างๆ
+                document.getElementById('alarm-sound').load(); // เตรียมเสียง
+                requestWakeLock(); // ล็อกจอไม่ให้ดับ
+                resetIdleTimer(); // เริ่มนับเวลาจอดำ
+                fetchJobs(); // ดึงรอบแรก
+                jobInterval = setInterval(fetchJobs, 10000); // วนลูปทุก 10 วินาที
+
             } else {
-                // เปลี่ยน UI เป็นโหมดพักผ่อน (สีเทา)
                 header.classList.replace('bg-amber-500', 'bg-gray-800'); 
                 overlay.classList.remove('hidden');
-                statusDot.classList.replace('bg-green-300', 'bg-gray-500'); 
-                statusDot.classList.remove('animate-pulse');
-                statusText.innerText = "ออฟไลน์ (พักผ่อน)"; 
-                statusText.classList.replace('text-amber-100', 'text-gray-300');
-                profileImg.classList.add('grayscale'); 
-                profileBorder.classList.replace('border-amber-200', 'border-transparent');
+                statusDot.classList.replace('bg-green-300', 'bg-gray-500'); statusDot.classList.remove('animate-pulse');
+                statusText.innerText = "ออฟไลน์ (พักผ่อน)"; statusText.classList.replace('text-amber-100', 'text-gray-300');
+                profileImg.classList.add('grayscale'); profileBorder.classList.replace('border-amber-200', 'border-transparent');
                 
-                // ปิดระบบสแกน
+                // ปิดระบบทั้งหมด
                 clearInterval(jobInterval);
+                clearTimeout(idleTimer);
+                wakeUpScreen(); // เอาจอดำออก
+                releaseWakeLock(); // ปล่อยให้จอดับได้ตามปกติ
                 document.getElementById('job-list-container').innerHTML = '';
             }
         }
 
-        // ดึงข้อมูลงานจากฐานข้อมูล (สมองกล GAS)
         async function fetchJobs() {
             try {
                 const response = await fetch(GAS_URL, { 
@@ -234,63 +313,69 @@
                 
                 document.getElementById('liff-loading').style.display = 'none';
 
-                // ถ้าบัญชียังไม่ผ่านการอนุมัติ
                 if(result.status === "error") {
                     document.getElementById('error-state').classList.remove('hidden');
                     document.getElementById('app-container').classList.add('hidden');
-                    if(isOnline) document.getElementById('toggle-online').click(); // บังคับปิดสวิตช์
+                    if(isOnline) document.getElementById('toggle-online').click();
                     return;
                 }
 
-                // ถ้าบัญชีใช้งานได้
                 document.getElementById('error-state').classList.add('hidden');
                 document.getElementById('app-container').classList.remove('hidden');
                 
                 myRiderName = result.riderName;
                 document.getElementById('rider-name').innerText = myRiderName;
 
-                // ตรวจสอบว่าไรเดอร์คนนี้ มี "งานที่กำลังวิ่งอยู่ (แต่ยังไม่จบ)" ไหม?
                 if(result.activeJob) {
                     showActiveJob(result.activeJob);
+                    wakeUpScreen(); // มีงานค้างอยู่ ให้จอแจ่มเสมอ
+                    clearTimeout(idleTimer); // ปิดระบบจอดำเวลามีงาน
                     return;
                 } else {
-                    // ถ้าไม่มีงานค้าง ให้โชว์หน้ากระดานเรดาร์
                     document.getElementById('view-active-job').classList.add('hidden');
                     document.getElementById('view-active-job').classList.remove('flex');
                     document.getElementById('view-job-board').classList.remove('hidden');
                     document.getElementById('view-job-board').classList.add('flex');
+                    resetIdleTimer(); // กลับมารองาน ให้นับเวลาจอดำต่อ
                 }
 
-                // แรนเดอร์รายการงานใหม่บนกระดาน (เฉพาะตอนเปิดสวิตช์ Online)
                 if(isOnline) renderJobBoard(result.jobs);
 
-            } catch (err) { console.log("Error fetching jobs:", err); }
+            } catch (err) { console.log("Fetch error:", err); }
         }
 
         let previousJobCount = 0;
         
-        // วาดการ์ดงานลงบนกระดาน
         function renderJobBoard(jobs) {
             const container = document.getElementById('job-list-container');
             container.innerHTML = '';
             
             if(jobs.length === 0) { previousJobCount = 0; return; }
 
-            // 🌟 เล่นเสียงเตือนทันที ถ้ามีจำนวนงาน "เพิ่มขึ้น" จากรอบที่แล้ว! 🌟
+            // 🌟 ท่าไม้ตาย! งานเข้าปุ๊บ ปลุกจอสว่าง พร้อมเสียงไซเรน 🌟
             if(jobs.length > previousJobCount) {
+                wakeUpScreen(); // เด้งจอสว่างทันที!
+                
                 const alarm = document.getElementById('alarm-sound');
                 alarm.currentTime = 0;
-                alarm.play().catch(e => console.log("Auto-play blocked by browser"));
+                alarm.play().catch(e => console.log("Auto-play blocked"));
+
+                // หุ่นยนต์พูดบอก
+                if ('speechSynthesis' in window) {
+                    const msg = new SpeechSynthesisUtterance("พี่วินคะ มีออเดอร์ใหม่เข้าค่ะ รีบกดรับงานนะคะ!");
+                    msg.lang = 'th-TH'; msg.rate = 1.1;
+                    window.speechSynthesis.speak(msg);
+                }
             }
             previousJobCount = jobs.length;
 
             jobs.forEach(job => {
                 container.innerHTML += `
-                    <div class="bg-white rounded-2xl shadow-lg border-l-4 border-amber-500 overflow-hidden relative mb-4 transform transition-all hover:scale-[1.02]">
+                    <div class="bg-white rounded-2xl shadow-lg border-l-4 border-amber-500 overflow-hidden relative mb-4 transform transition-all">
                         <div class="p-4 bg-amber-50/30">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
-                                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse shadow-sm shadow-red-500/50">งานใหม่เข้า!</span>
+                                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded animate-pulse">งานใหม่เข้า!</span>
                                     <p class="text-xs font-bold text-gray-800 mt-1">${job.orderId}</p>
                                 </div>
                                 <div class="text-right">
@@ -312,7 +397,7 @@
                                 </div>
                             </div>
                             
-                            <button onclick="acceptJob('${job.orderId}', this)" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 text-base flex justify-center items-center gap-2 transition-all">
+                            <button onclick="acceptJob('${job.orderId}', this)" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3.5 rounded-xl shadow-md active:scale-95 text-base flex justify-center items-center gap-2">
                                 <i class="fas fa-motorcycle"></i> กดรับงานนี้ทันที!
                             </button>
                         </div>
@@ -320,36 +405,41 @@
             });
         }
 
-        // พี่วินกดยืนยันรับงาน (แย่งงาน)
-        async function acceptJob(orderId, btn) {
-            const originalText = btn.innerHTML; 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังแย่งงาน...'; 
-            btn.disabled = true;
-            btn.classList.add('opacity-70');
-            
-            try {
-                const response = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: "rider_accept_job", orderId: orderId, riderName: myRiderName }) 
-                });
-                const result = await response.json();
-                
-                if(result.status === "success") { 
-                    // รับงานสำเร็จ โหลดหน้าจอ Active Job ขึ้นมาเลย
-                    fetchJobs(); 
-                } else { 
-                    alert(result.message); // โดนคนอื่นแย่งไปแล้ว หรือ Error
-                    fetchJobs(); 
-                } 
-            } catch (err) { 
-                alert('เครือข่ายขัดข้อง ลองกดรับงานใหม่นะคะ');
-                btn.innerHTML = originalText; 
-                btn.disabled = false; 
-                btn.classList.remove('opacity-70');
+        // ปุ่มเทสต์ระบบจอดำและเสียง (สำหรับโชว์นายทุน)
+        function simulateNewJob() {
+            if(!isOnline) { alert("ต้องเปิดสวิตช์รับงานก่อนค่ะ"); return; }
+            wakeUpScreen(); // ปลุกจอสว่าง
+            const alarm = document.getElementById('alarm-sound');
+            alarm.currentTime = 0; alarm.play();
+            if ('speechSynthesis' in window) {
+                const msg = new SpeechSynthesisUtterance("พี่สมหมายคะ มีงานด่วนเข้ามาใหม่ค่ะ ได้ค่าส่ง สิบห้าบาท รีบกดรับงานเลยค่ะ!");
+                msg.lang = 'th-TH'; window.speechSynthesis.speak(msg);
             }
         }
 
-        // เปลี่ยนหน้าจอไปเป็น "กำลังวิ่งงาน"
+        async function acceptJob(orderId, btn) {
+            const alarm = document.getElementById('alarm-sound');
+            alarm.pause(); alarm.currentTime = 0; // ปิดเสียงไซเรน
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel(); // หยุดหุ่นยนต์พูด
+
+            const originalText = btn.innerHTML; 
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังแย่งงาน...'; 
+            btn.disabled = true; btn.classList.add('opacity-70');
+            
+            try {
+                const response = await fetch(GAS_URL, { 
+                    method: 'POST', body: JSON.stringify({ action: "rider_accept_job", orderId: orderId, riderName: myRiderName }) 
+                });
+                const result = await response.json();
+                
+                if(result.status === "success") { fetchJobs(); } 
+                else { alert(result.message); fetchJobs(); } 
+            } catch (err) { 
+                alert('เครือข่ายขัดข้อง ลองกดรับงานใหม่นะคะ');
+                btn.innerHTML = originalText; btn.disabled = false; btn.classList.remove('opacity-70');
+            }
+        }
+
         function showActiveJob(job) {
             currentJobId = job.orderId;
             document.getElementById('view-job-board').classList.add('hidden');
@@ -361,7 +451,6 @@
             document.getElementById('active-shop-name').innerText = job.shopName;
             document.getElementById('active-delivery-fee').innerText = job.deliveryFee;
 
-            // ตรวจสอบวิธีชำระเงิน เพื่อบอกพี่วินว่าต้องเก็บเงินสดไหม
             const instruction = document.getElementById('payment-instruction');
             if(job.payMethod === "COD") {
                 instruction.innerHTML = `
@@ -374,7 +463,6 @@
                         </div>
                     </div>`;
                 instruction.classList.replace('bg-gray-50', 'bg-red-50');
-                instruction.classList.replace('border-gray-200', 'border-red-200');
             } else {
                 instruction.innerHTML = `
                     <div class="flex items-start gap-2">
@@ -386,39 +474,32 @@
                         </div>
                     </div>`;
                 instruction.classList.replace('bg-red-50', 'bg-emerald-50');
-                instruction.classList.replace('border-red-200', 'border-emerald-200');
             }
         }
 
-        // ไรเดอร์กดปิดจ๊อบ (ส่งอาหารเสร็จแล้ว)
         async function completeJob() {
             if(!confirm("ตรวจสอบความเรียบร้อย! คุณส่งอาหารให้ลูกค้าเสร็จแล้วใช่ไหมคะ?")) return;
             
             const btn = document.getElementById('btn-complete-job'); 
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังปิดงาน...'; 
-            btn.disabled = true;
-            btn.classList.replace('bg-emerald-500', 'bg-gray-400');
+            btn.disabled = true; btn.classList.replace('bg-emerald-500', 'bg-gray-400');
             
             try {
                 const response = await fetch(GAS_URL, { 
-                    method: 'POST', 
-                    body: JSON.stringify({ action: "rider_complete_job", orderId: currentJobId }) 
+                    method: 'POST', body: JSON.stringify({ action: "rider_complete_job", orderId: currentJobId }) 
                 });
                 const result = await response.json();
                 
                 if(result.status === "success") { 
                     alert("ปิดงานสวยงาม! เยี่ยมมากค่ะพี่วิน! 👏"); 
-                    fetchJobs(); // รีโหลดระบบกลับไปหน้าเรดาร์
-                } else {
-                    alert("เกิดข้อผิดพลาดในการอัปเดตสถานะค่ะ");
-                }
+                    currentJobId = null; // เคลียร์สถานะงานค้าง
+                    fetchJobs(); 
+                } else { alert("เกิดข้อผิดพลาดในการอัปเดตสถานะค่ะ"); }
             } catch (err) { 
                 alert('ระบบขัดข้อง กรุณาลองกดอีกครั้งค่ะ'); 
             } finally { 
-                btn.innerHTML = originalText; 
-                btn.disabled = false; 
-                btn.classList.replace('bg-gray-400', 'bg-emerald-500');
+                btn.innerHTML = originalText; btn.disabled = false; btn.classList.replace('bg-gray-400', 'bg-emerald-500');
             }
         }
     </script>
